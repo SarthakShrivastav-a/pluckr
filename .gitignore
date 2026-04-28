@@ -1,8 +1,9 @@
-# Binaries
+# Binaries (anchored to repo root - bare 'pluckr' would also match
+# cmd/pluckr/ and the plugin/ subtree).
 /bin/
 /dist/
-pluckr
-pluckr.exe
+/pluckr
+/pluckr.exe
 
 # Go
 *.test
