@@ -11,11 +11,18 @@
 package chunk
 
 import (
+	"regexp"
 	"strings"
 	"unicode"
 
 	"github.com/SarthakShrivastav-a/pluckr/internal/types"
 )
+
+// headingSelfLink mirrors the renderer's regex. The chunker applies it
+// defensively when extracting heading text so caches written by an older
+// pluckr (which left markdown self-links inline) still produce clean
+// heading paths after a 'pluckr reindex'.
+var headingSelfLink = regexp.MustCompile(`\[([^\]]+)\]\(#[^)]*\)`)
 
 // Chunker is the operational interface; HeadingChunker is the only impl.
 type Chunker interface {
@@ -223,6 +230,8 @@ func parseHeading(line string) (int, string) {
 		return 0, ""
 	}
 	text := strings.TrimSpace(strings.TrimRight(line[level+1:], "#"))
+	text = headingSelfLink.ReplaceAllString(text, "$1")
+	text = strings.TrimSpace(text)
 	if text == "" {
 		return 0, ""
 	}

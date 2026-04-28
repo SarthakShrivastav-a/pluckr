@@ -41,6 +41,14 @@ const EmptyContentMin = 80
 // can identify markdown bodies that aren't advertised via Content-Type.
 var markdownSignal = regexp.MustCompile("(?m)^(#{1,6}\\s|[-*]\\s|\\d+\\.\\s|```|>\\s|\\[.+\\]\\(.+\\))")
 
+// headingSelfLink matches a markdown link whose target is an in-page
+// fragment, e.g. [Toggling dark mode](#toggling-dark-mode). Modern docs
+// engines wrap each heading text in such an anchor for the copy-link
+// hover affordance, and html-to-markdown faithfully serialises it. We
+// strip these links from heading lines so chunked heading paths and
+// the on-disk markdown both read like plain prose.
+var headingSelfLink = regexp.MustCompile(`\[([^\]]+)\]\(#[^)]*\)`)
+
 // mainSelectors is consulted in order; the first selector that matches a
 // node carrying more than EmptyContentMin bytes of text wins. This mirrors
 // what most docs platforms render.
@@ -104,6 +112,7 @@ func (r *HTMLRenderer) Render(body []byte, contentType, sourceURL string) (types
 	if err != nil {
 		return types.Document{}, fmt.Errorf("render: convert: %w", err)
 	}
+	md = stripHeadingSelfLinks(md)
 	md = normalizeMarkdown(md)
 
 	outline := extractOutline(md)
@@ -119,7 +128,8 @@ func (r *HTMLRenderer) Render(body []byte, contentType, sourceURL string) (types
 }
 
 func (r *HTMLRenderer) renderMarkdown(body []byte, sourceURL string) types.Document {
-	md := normalizeMarkdown(string(body))
+	md := stripHeadingSelfLinks(string(body))
+	md = normalizeMarkdown(md)
 	title := titleFromMarkdown(md)
 	outline := extractOutline(md)
 	return types.Document{
@@ -198,6 +208,22 @@ func estimateTokens(s string) int {
 func hashOf(s string) string {
 	sum := sha256.Sum256([]byte(s))
 	return hex.EncodeToString(sum[:])
+}
+
+// stripHeadingSelfLinks removes [text](#anchor) markdown links found on
+// heading lines. External-target links are left alone - the user might
+// legitimately link out from a heading and we shouldn't break that.
+func stripHeadingSelfLinks(md string) string {
+	if !strings.Contains(md, "](#") {
+		return md
+	}
+	lines := strings.Split(md, "\n")
+	for i, line := range lines {
+		if strings.HasPrefix(strings.TrimLeft(line, " \t"), "#") {
+			lines[i] = headingSelfLink.ReplaceAllString(line, "$1")
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 // normalizeMarkdown collapses runs of blank lines and trims trailing

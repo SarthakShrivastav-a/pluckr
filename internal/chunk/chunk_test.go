@@ -158,6 +158,11 @@ func TestParseHeading(t *testing.T) {
 		{"#nospace", 0, ""},
 		{"plain", 0, ""},
 		{"####### too many", 0, ""},
+		// Self-anchor link from html-to-markdown is unwrapped.
+		{"## [Toggling dark mode](#toggling-dark-mode)", 2, "Toggling dark mode"},
+		{"### [a](#a) and [b](#b)", 3, "a and b"},
+		// External link in a heading is preserved.
+		{"## See [spec](https://w3.org)", 2, "See [spec](https://w3.org)"},
 	}
 	for _, c := range cases {
 		gotLevel, gotText := parseHeading(c.line)
