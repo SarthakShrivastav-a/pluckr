@@ -1,0 +1,102 @@
+version: 2
+
+project_name: pluckr
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: pluckr
+    main: ./cmd/pluckr
+    binary: pluckr
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - id: pluckr
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - LICENSE
+      - README.md
+      - docs/design.md
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^merge:"
+
+brews:
+  - name: pluckr
+    description: "Local-first, agent-native docs cache served over MCP."
+    homepage: "https://github.com/SarthakShrivastav-a/pluckr"
+    license: "MIT"
+    repository:
+      owner: SarthakShrivastav-a
+      name: homebrew-tap
+    directory: Formula
+    install: |
+      bin.install "pluckr"
+    test: |
+      system "#{bin}/pluckr", "--version"
+
+scoops:
+  - name: pluckr
+    description: "Local-first, agent-native docs cache served over MCP."
+    homepage: "https://github.com/SarthakShrivastav-a/pluckr"
+    license: "MIT"
+    repository:
+      owner: SarthakShrivastav-a
+      name: scoop-bucket
+
+release:
+  draft: true
+  prerelease: auto
+  name_template: "pluckr {{.Version}}"
+  header: |
+    ## pluckr {{.Tag}}
+
+    Local-first, agent-native docs cache served over MCP.
+
+    Install:
+
+    ```bash
+    brew install SarthakShrivastav-a/tap/pluckr
+    # or
+    scoop bucket add pluckr https://github.com/SarthakShrivastav-a/scoop-bucket
+    scoop install pluckr
+    # or
+    go install github.com/SarthakShrivastav-a/pluckr/cmd/pluckr@{{.Tag}}
+    ```
