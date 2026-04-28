@@ -1,0 +1,29 @@
+# Binaries
+/bin/
+/dist/
+pluckr
+pluckr.exe
+
+# Go
+*.test
+*.out
+coverage.txt
+go.work
+go.work.sum
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local caches and runs
+/.pluckr/
+/tmp/
+/scratch/
+*.local.toml
