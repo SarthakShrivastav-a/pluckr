@@ -232,16 +232,18 @@ LIMIT ? OFFSET ?
 	return out, rows.Err()
 }
 
-// sanitizeQuery escapes FTS5 special characters that would otherwise
-// cause a syntax error for natural-language input. Wrapping each term in
-// double quotes keeps multi-word queries simple while still allowing
-// FTS5 to BM25-rank them as separate tokens.
+// sanitizeQuery turns user input into a valid FTS5 MATCH expression.
+// Each term is wrapped in double quotes (so punctuation can't break the
+// parser) and the terms are joined with OR so BM25 can rank documents
+// by how many of the terms they hit, weighted by rarity. Bare AND
+// behaviour drops most natural-language queries to zero hits the moment
+// a single word is missing from the corpus, which is the wrong default
+// for an agent-driven search surface.
 func sanitizeQuery(q string) string {
 	q = strings.ReplaceAll(q, "\"", "")
 	parts := strings.Fields(q)
-	for i, p := range parts {
-		// Strip lingering punctuation that FTS5 rejects at the start
-		// of a quoted string.
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
 		p = strings.TrimFunc(p, func(r rune) bool {
 			switch r {
 			case '(', ')', ':', '*', '"', '\'':
@@ -252,7 +254,13 @@ func sanitizeQuery(q string) string {
 		if p == "" {
 			continue
 		}
-		parts[i] = "\"" + p + "\""
+		out = append(out, "\""+p+"\"")
 	}
-	return strings.Join(parts, " ")
+	if len(out) == 0 {
+		return ""
+	}
+	if len(out) == 1 {
+		return out[0]
+	}
+	return strings.Join(out, " OR ")
 }
