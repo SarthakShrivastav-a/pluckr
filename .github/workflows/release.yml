@@ -1,0 +1,31 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          # PLUCKR_RELEASE_TOKEN must have repo scope on the brew tap
+          # and scoop bucket repos so goreleaser can push the formula
+          # / manifest. The default GITHUB_TOKEN cannot reach those
+          # repos.
+          GITHUB_TOKEN: ${{ secrets.PLUCKR_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
