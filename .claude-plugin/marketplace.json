@@ -1,0 +1,17 @@
+{
+  "name": "pluckr",
+  "owner": {
+    "name": "SarthakShrivastav-a",
+    "url": "https://github.com/SarthakShrivastav-a"
+  },
+  "plugins": [
+    {
+      "name": "pluckr",
+      "source": "./plugin",
+      "description": "Local-first, agent-native docs cache. Pulls docs sites, llms.txt endpoints, GitHub repos, and local folders into a markdown cache and serves it to Claude Code over MCP.",
+      "version": "0.1.0",
+      "homepage": "https://github.com/SarthakShrivastav-a/pluckr",
+      "license": "MIT"
+    }
+  ]
+}
