@@ -85,6 +85,13 @@ The kind is detected from the spec; pass --kind to override.`,
 	return cmd
 }
 
+// DetectKind is the exported wrapper of detectKind so the MCP server's
+// add_source tool can share the same logic without duplicating it.
+func DetectKind(spec string) string { return detectKind(spec) }
+
+// DeriveName is the exported wrapper of deriveName.
+func DeriveName(spec, kind string) string { return deriveName(spec, kind) }
+
 // detectKind picks a source kind from the spec, with hard-fail returning
 // the empty string so the caller can prompt for --kind.
 func detectKind(spec string) string {
