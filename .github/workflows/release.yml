@@ -15,17 +15,33 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25.x"
+
+      # Brew and scoop publication are gated behind a repo variable so the
+      # release succeeds even before the tap and bucket repos exist. Set
+      # PLUCKR_PUBLISH_PACKAGE_MANAGERS=true (Settings -> Variables -> Actions)
+      # once the satellite repos are ready and PLUCKR_RELEASE_TOKEN is
+      # configured as a secret.
+      - name: Compute goreleaser skip flags
+        id: flags
+        run: |
+          if [ "${{ vars.PLUCKR_PUBLISH_PACKAGE_MANAGERS }}" = "true" ]; then
+            echo "skips=" >> "$GITHUB_OUTPUT"
+          else
+            echo "skips=--skip=homebrew,scoop" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean
+          args: release --clean ${{ steps.flags.outputs.skips }}
         env:
           # PLUCKR_RELEASE_TOKEN must have repo scope on the brew tap
           # and scoop bucket repos so goreleaser can push the formula
           # / manifest. The default GITHUB_TOKEN cannot reach those
-          # repos.
+          # repos, but works fine for the binary release itself.
           GITHUB_TOKEN: ${{ secrets.PLUCKR_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
