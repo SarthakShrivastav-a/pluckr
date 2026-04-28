@@ -126,15 +126,41 @@ func TestStore_Remove(t *testing.T) {
 
 func TestSanitizeQuery(t *testing.T) {
 	cases := []struct{ in, want string }{
-		{"hello world", `"hello" "world"`},
+		{"hello world", `"hello" OR "world"`},
 		{"useState()", `"useState"`},
-		{`how to "use"  hooks`, `"how" "to" "use" "hooks"`},
+		{`how to "use"  hooks`, `"how" OR "to" OR "use" OR "hooks"`},
 		{"", ""},
+		{"   ", ""},
 	}
 	for _, c := range cases {
 		if got := sanitizeQuery(c.in); got != c.want {
 			t.Errorf("sanitizeQuery(%q) = %q, want %q", c.in, got, c.want)
 		}
+	}
+}
+
+// TestStore_NaturalLanguageQueryMatchesPartialOverlap locks in the OR
+// behaviour: a query whose terms only partially overlap with any
+// chunk's text must still return ranked hits.
+func TestStore_NaturalLanguageQueryMatchesPartialOverlap(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	chunks := []types.Chunk{
+		{URL: "/a", Path: "a", Title: "A", HeadingPath: []string{"Hooks"}, Body: "useState lets you add state to function components.", TokenCount: 12},
+		{URL: "/b", Path: "b", Title: "B", HeadingPath: []string{"Effects"}, Body: "useEffect synchronises a component with an external system.", TokenCount: 12},
+	}
+	if err := s.Index(ctx, "x", chunks); err != nil {
+		t.Fatalf("Index: %v", err)
+	}
+	// "interview" is absent from the corpus; with bare-AND this would
+	// have returned nothing. With OR the query still surfaces the
+	// useState chunk because "useState" is present.
+	hits, err := s.Search(ctx, "useState interview practice", retriever.SearchOptions{Limit: 3})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(hits) == 0 {
+		t.Fatalf("expected at least one hit; OR semantics broken")
 	}
 }
 

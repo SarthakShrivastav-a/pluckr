@@ -273,6 +273,13 @@ func registerRefreshSource(srv *mcpserver.MCPServer, cache *store.Cache, reg *re
 		if !ok {
 			return mcpgo.NewToolResultError(fmt.Sprintf("no such source: %s", name)), nil
 		}
+		// EnsureSource creates the on-disk directory before SQLite is
+		// asked to open the FTS5 file inside it. Without this a
+		// brand-new source (added via add_source then immediately
+		// refreshed) fails with 'unable to open database file'.
+		if err := cache.EnsureSource(entry.Name); err != nil {
+			return mcpgo.NewToolResultError(err.Error()), nil
+		}
 		idx, err := fts5.Open(cache.IndexDBPath(entry.Name))
 		if err != nil {
 			return mcpgo.NewToolResultError(err.Error()), nil
