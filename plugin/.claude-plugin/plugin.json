@@ -1,0 +1,13 @@
+{
+  "name": "pluckr",
+  "version": "0.1.0",
+  "description": "Local-first, agent-native docs cache. Pull docs sites, llms.txt endpoints, GitHub repos, and local folders into a markdown cache that any LLM agent can search via MCP.",
+  "homepage": "https://github.com/SarthakShrivastav-a/pluckr",
+  "license": "MIT",
+  "mcpServers": {
+    "pluckr": {
+      "command": "pluckr",
+      "args": ["mcp"]
+    }
+  }
+}
