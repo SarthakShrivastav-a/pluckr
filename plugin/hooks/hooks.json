@@ -1,0 +1,14 @@
+{
+  "SessionStart": [
+    {
+      "matcher": ".*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "pluckr list",
+          "description": "Surface the available pluckr sources at the start of every session so the agent knows what to search."
+        }
+      ]
+    }
+  ]
+}
