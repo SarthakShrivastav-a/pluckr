@@ -10,6 +10,7 @@ import (
 	"github.com/SarthakShrivastav-a/pluckr/internal/chunk"
 	"github.com/SarthakShrivastav-a/pluckr/internal/render"
 	"github.com/SarthakShrivastav-a/pluckr/internal/retriever/fts5"
+	"github.com/SarthakShrivastav-a/pluckr/internal/store"
 	"github.com/SarthakShrivastav-a/pluckr/internal/types"
 )
 
@@ -46,18 +47,28 @@ func newReindexCmd(g *Globals) *cobra.Command {
 				if err != nil {
 					return err
 				}
-				stripped, frontmatter := splitFrontmatter(body)
-				doc, err := r.Render(stripped, "text/markdown", urlFromFrontmatter(frontmatter, p))
+				stripped, fm := store.SplitFrontmatter(body)
+				url := fm["url"]
+				if url == "" {
+					url = p
+				}
+				doc, err := r.Render(stripped, "text/markdown", url)
 				if err != nil {
 					return fmt.Errorf("render %s: %w", p, err)
 				}
 				doc.Source = name
 				doc.Path = strings.TrimSuffix(p, ".md")
+				if title := fm["title"]; title != "" {
+					doc.Title = title
+				}
 				chunks := c.Chunk(doc)
 				for i := range chunks {
 					chunks[i].Source = name
 					if chunks[i].Path == "" {
 						chunks[i].Path = doc.Path
+					}
+					if chunks[i].Title == "" && doc.Title != "" {
+						chunks[i].Title = doc.Title
 					}
 				}
 				allChunks = append(allChunks, chunks...)
@@ -72,34 +83,3 @@ func newReindexCmd(g *Globals) *cobra.Command {
 	}
 }
 
-// splitFrontmatter peels off a leading YAML block (delimited by --- on
-// its own line) and returns the markdown body plus the frontmatter
-// content. If there is no frontmatter, the body is returned unchanged.
-func splitFrontmatter(body []byte) ([]byte, string) {
-	s := string(body)
-	if !strings.HasPrefix(s, "---\n") {
-		return body, ""
-	}
-	rest := s[4:]
-	end := strings.Index(rest, "\n---\n")
-	if end < 0 {
-		return body, ""
-	}
-	frontmatter := rest[:end]
-	markdown := strings.TrimLeft(rest[end+5:], "\n")
-	return []byte(markdown), frontmatter
-}
-
-func urlFromFrontmatter(fm, fallback string) string {
-	for _, line := range strings.Split(fm, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "url:") {
-			v := strings.TrimSpace(strings.TrimPrefix(line, "url:"))
-			v = strings.Trim(v, `"`)
-			if v != "" {
-				return v
-			}
-		}
-	}
-	return fallback
-}

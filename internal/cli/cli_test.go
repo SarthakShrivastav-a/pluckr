@@ -72,30 +72,6 @@ func TestHumanAgo(t *testing.T) {
 	}
 }
 
-func TestSplitFrontmatter(t *testing.T) {
-	body := []byte("---\ntitle: \"x\"\nurl: \"https://x\"\n---\n\n# Hello\n\nbody.")
-	md, fm := splitFrontmatter(body)
-	if !strings.HasPrefix(string(md), "# Hello") {
-		t.Errorf("md not stripped: %q", md)
-	}
-	if !strings.Contains(fm, `url: "https://x"`) {
-		t.Errorf("frontmatter missing url: %q", fm)
-	}
-	if got := urlFromFrontmatter(fm, "fallback"); got != "https://x" {
-		t.Errorf("urlFromFrontmatter = %q", got)
-	}
-}
-
-func TestSplitFrontmatter_NoFrontmatter(t *testing.T) {
-	body := []byte("# Hello\n\nbody.")
-	md, fm := splitFrontmatter(body)
-	if string(md) != string(body) {
-		t.Errorf("body should pass through unchanged")
-	}
-	if fm != "" {
-		t.Errorf("expected empty frontmatter, got %q", fm)
-	}
-}
 
 // integration: add -> list -> search
 func TestCLI_AddListSearch(t *testing.T) {

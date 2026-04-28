@@ -41,28 +41,12 @@ func TestBuildServer_ToolsWithMutations(t *testing.T) {
 	}
 }
 
-func TestSplitFrontmatter(t *testing.T) {
-	body := []byte("---\ntitle: \"x\"\nurl: \"https://x\"\n---\n\n# Hello\n\nbody.")
-	md, fm := splitFrontmatter(body)
-	if string(md) != "# Hello\n\nbody." {
-		t.Errorf("md = %q", md)
+func TestFirstNonEmpty(t *testing.T) {
+	if got := firstNonEmpty("", "a", "b"); got != "a" {
+		t.Errorf("got %q, want a", got)
 	}
-	if want := `url: "https://x"`; !contains(fm, want) {
-		t.Errorf("frontmatter missing %q: %q", want, fm)
-	}
-	if got := urlFromFrontmatter(fm, "fallback"); got != "https://x" {
-		t.Errorf("urlFromFrontmatter = %q", got)
-	}
-}
-
-func TestSplitFrontmatter_NoFrontmatter(t *testing.T) {
-	body := []byte("# Hello\n\nbody.")
-	md, fm := splitFrontmatter(body)
-	if string(md) != string(body) {
-		t.Errorf("md should be unchanged")
-	}
-	if fm != "" {
-		t.Errorf("fm should be empty")
+	if got := firstNonEmpty("", ""); got != "" {
+		t.Errorf("got %q, want empty", got)
 	}
 }
 

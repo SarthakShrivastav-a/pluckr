@@ -228,13 +228,19 @@ func registerGetOutline(srv *mcpserver.MCPServer, cache *store.Cache, reg *regis
 			if err != nil {
 				continue
 			}
-			stripped, fm := splitFrontmatter(body)
-			doc, err := r.Render(stripped, "text/markdown", urlFromFrontmatter(fm, p))
+			stripped, fm := store.SplitFrontmatter(body)
+			doc, err := r.Render(stripped, "text/markdown", firstNonEmpty(fm["url"], p))
 			if err != nil {
 				continue
 			}
 			doc.Source = source
 			doc.Path = strings.TrimSuffix(p, ".md")
+			// The frontmatter is authoritative for title - it preserves
+			// the rendered <title> from the original fetch even when
+			// the page body has no H1 (Tailwind, MDN, etc.).
+			if title := fm["title"]; title != "" {
+				doc.Title = title
+			}
 			chunks := c.Chunk(doc)
 			for _, ch := range chunks {
 				nodes = append(nodes, outlineNode{
@@ -375,34 +381,12 @@ func jsonResult(v any) (*mcpgo.CallToolResult, error) {
 	return mcpgo.NewToolResultText(string(data)), nil
 }
 
-// splitFrontmatter / urlFromFrontmatter mirror the cli helpers; kept
-// inlined here to avoid an awkward import dependency from the cli
-// package on its own subpackages.
-func splitFrontmatter(body []byte) ([]byte, string) {
-	s := string(body)
-	if !strings.HasPrefix(s, "---\n") {
-		return body, ""
-	}
-	rest := s[4:]
-	end := strings.Index(rest, "\n---\n")
-	if end < 0 {
-		return body, ""
-	}
-	frontmatter := rest[:end]
-	markdown := strings.TrimLeft(rest[end+5:], "\n")
-	return []byte(markdown), frontmatter
-}
-
-func urlFromFrontmatter(fm, fallback string) string {
-	for _, line := range strings.Split(fm, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "url:") {
-			v := strings.TrimSpace(strings.TrimPrefix(line, "url:"))
-			v = strings.Trim(v, `"`)
-			if v != "" {
-				return v
-			}
+// firstNonEmpty returns the first non-empty string from values.
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
 		}
 	}
-	return fallback
+	return ""
 }

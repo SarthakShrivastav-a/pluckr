@@ -131,6 +131,68 @@ func TestExtractOutline_IgnoresFencedCode(t *testing.T) {
 	}
 }
 
+func TestStripHeadingSelfLinks(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{
+			"## [Toggling dark mode](#toggling-dark-mode)",
+			"## Toggling dark mode",
+		},
+		{
+			"### [Sub heading](#sub-heading) trailing",
+			"### Sub heading trailing",
+		},
+		{
+			// Non-fragment link in a heading is preserved.
+			"## See [the spec](https://w3.org/spec)",
+			"## See [the spec](https://w3.org/spec)",
+		},
+		{
+			// Self-anchor link in body content - left alone (only
+			// heading lines are touched).
+			"## Pure heading\n\nA paragraph with [a link](#anchor).",
+			"## Pure heading\n\nA paragraph with [a link](#anchor).",
+		},
+		{
+			// Indented heading still gets the strip.
+			"  ## [Indented](#indented)",
+			"  ## Indented",
+		},
+		{
+			"# No links here",
+			"# No links here",
+		},
+	}
+	for _, c := range cases {
+		if got := stripHeadingSelfLinks(c.in); got != c.want {
+			t.Errorf("stripHeadingSelfLinks(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
+func TestRender_StripsHeadingSelfLinksFromHTML(t *testing.T) {
+	// Simulate Tailwind's pattern: each heading wraps its text in a
+	// self-anchor link for the copy-link affordance.
+	html := `<html><body><main>
+		<h1>Page</h1>
+		<h2 id="overview"><a href="#overview">Overview</a></h2>
+		<p>Plenty of text here so the empty-content threshold is comfortably cleared by the renderer.</p>
+		<h2 id="toggling"><a href="#toggling">Toggling dark mode</a></h2>
+		<p>More body text continues here for additional padding past the renderer threshold check.</p>
+	</main></body></html>`
+	doc, err := New().Render([]byte(html), "text/html", "https://x.example/dark")
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	if strings.Contains(doc.Markdown, "](#") {
+		t.Errorf("self-anchor links leaked into heading markdown: %q", doc.Markdown)
+	}
+	for _, h := range doc.Outline {
+		if strings.Contains(h.Text, "[") || strings.Contains(h.Text, "](") {
+			t.Errorf("outline heading text leaked link syntax: %q", h.Text)
+		}
+	}
+}
+
 func TestNormalizeMarkdown(t *testing.T) {
 	in := "Hello\r\n\r\n\r\nworld   \nfoo\t\n\n\n\nend\n"
 	got := normalizeMarkdown(in)
