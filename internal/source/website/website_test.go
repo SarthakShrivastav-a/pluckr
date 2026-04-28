@@ -45,6 +45,44 @@ func TestScopePath(t *testing.T) {
 	}
 }
 
+// TestDiscover_HonorsOriginalScopeOverRedirect locks in the fix for
+// docs sites that redirect /docs -> /docs/<deep-page>. The discovery
+// scope must stay at /docs so the rest of the docs tree remains in
+// range.
+func TestDiscover_HonorsOriginalScopeOverRedirect(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/docs", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/docs/installation/using-vite", http.StatusFound)
+	})
+	mux.HandleFunc("/docs/installation/using-vite", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprint(w, `<html><body><nav>
+			<a href="/docs/installation/using-vite">Vite</a>
+			<a href="/docs/responsive-design">Responsive Design</a>
+			<a href="/docs/dark-mode">Dark Mode</a>
+			<a href="/docs/colors">Colors</a>
+			<a href="/docs/spacing">Spacing</a>
+			<a href="/docs/typography">Typography</a>
+			<a href="/docs/effects">Effects</a>
+		</nav><main><h1>Vite</h1><p>Use Vite for installation.</p></main></body></html>`)
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
+		http.NotFound(w, nil)
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	urls, err := Discover(context.Background(), srv.URL+"/docs", DiscoverOptions{
+		MaxPages: 50, Fetcher: fetch.NewHTTP(),
+	})
+	if err != nil {
+		t.Fatalf("Discover: %v", err)
+	}
+	if len(urls) < 5 {
+		t.Fatalf("expected discovery to keep /docs as the scope and find sibling pages, got %d urls: %v", len(urls), urls)
+	}
+}
+
 func TestFilterAndDedupe(t *testing.T) {
 	hosts := map[string]struct{}{"docs.example.com": {}}
 	urls := []string{

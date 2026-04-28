@@ -102,7 +102,15 @@ func Discover(ctx context.Context, entry string, opts DiscoverOptions) ([]string
 	}
 
 	hosts := map[string]struct{}{original.Hostname(): {}, actual.Hostname(): {}}
+	// When the entry URL redirects to a deeper page (e.g. /docs ->
+	// /docs/installation/using-vite), the actual path's scope would
+	// narrow discovery to the redirect target's directory. The user
+	// asked for /docs, so prefer the broader scope when one is a
+	// prefix of the other.
 	scope := scopePath(actual.Path)
+	if originalScope := scopePath(original.Path); strings.HasPrefix(scope, originalScope) && len(originalScope) < len(scope) {
+		scope = originalScope
+	}
 
 	// Sitemap strategies in parallel: robots.txt + common paths at
 	// original and post-redirect origins.
