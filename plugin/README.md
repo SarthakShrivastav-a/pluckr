@@ -5,11 +5,13 @@ Bundles the `pluckr` MCP server, a docs-cache skill, and four slash commands so 
 ## Install
 
 ```bash
-# 1. Install the binary (Homebrew, scoop, or go install).
-brew install SarthakShrivastav-a/tap/pluckr
+# 1. Install the pluckr binary.
+go install github.com/SarthakShrivastav-a/pluckr/cmd/pluckr@latest
 
-# 2. Install this plugin.
-claude plugin install github.com/SarthakShrivastav-a/pluckr/plugin
+# 2. Install this plugin from inside Claude Code.
+/plugin marketplace add SarthakShrivastav-a/pluckr
+/plugin install pluckr@pluckr
+/reload-plugins
 ```
 
 ## What you get
