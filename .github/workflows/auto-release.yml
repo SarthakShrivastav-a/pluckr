@@ -1,0 +1,64 @@
+name: auto-release
+
+# Every push to main computes a semver bump from the commits since the
+# last tag, creates the next tag, and runs goreleaser inline. Brew and
+# scoop publication are gated behind the same variable as release.yml.
+#
+# Bump rules (mathieudutour/github-tag-action defaults):
+#   feat:           -> minor
+#   fix: / perf:    -> patch
+#   feat!: / BREAKING CHANGE -> major
+#   anything else   -> default_bump (patch, see below)
+#
+# Set default_bump to "false" if you want commits without a conventional
+# prefix to skip releasing.
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute next tag
+        id: tag
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: patch
+          release_branches: main
+          tag_prefix: v
+
+      - uses: actions/setup-go@v5
+        if: steps.tag.outputs.new_tag != ''
+        with:
+          go-version: "1.25.x"
+
+      - name: Compute goreleaser skip flags
+        if: steps.tag.outputs.new_tag != ''
+        id: flags
+        run: |
+          if [ "${{ vars.PLUCKR_PUBLISH_PACKAGE_MANAGERS }}" = "true" ]; then
+            echo "skips=" >> "$GITHUB_OUTPUT"
+          else
+            echo "skips=--skip=homebrew,scoop" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: goreleaser/goreleaser-action@v6
+        if: steps.tag.outputs.new_tag != ''
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean ${{ steps.flags.outputs.skips }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.PLUCKR_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          GORELEASER_CURRENT_TAG: ${{ steps.tag.outputs.new_tag }}
