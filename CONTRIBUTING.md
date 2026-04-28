@@ -78,4 +78,4 @@ Comments explain *why*, not *what*. Identifier names should already tell the rea
 
 ## Releasing
 
-Tag with `git tag vX.Y.Z && git push --tags`; the release workflow runs goreleaser, publishes binaries, and updates the brew tap and scoop bucket if `PLUCKR_RELEASE_TOKEN` is configured.
+Tag with `git tag vX.Y.Z && git push --tags` and the release workflow runs GoReleaser to publish per-platform binaries on the GitHub Releases page. Day-to-day, every push to `main` auto-bumps and releases via `auto-release.yml` — most contributors never tag manually.

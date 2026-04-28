@@ -18,5 +18,5 @@ Notable changes per release. Format follows [Keep a Changelog](https://keepachan
   - Cobra-based CLI: `add`, `list`, `remove`, `pull`, `search`, `reindex`, `mcp`, `root`.
   - MCP server with seven tools: `search_docs`, `get_page`, `list_sources`, `get_outline`, `refresh_source`, `add_source`, `remove_source`.
   - Claude Code plugin scaffold: MCP server registration, docs-cache skill, four slash commands, SessionStart hook.
-  - GoReleaser config for Homebrew tap, Scoop bucket, and per-platform binaries.
-  - GitHub Actions workflows for CI (vet + race tests on linux/macOS/windows) and tag-driven releases.
+  - GoReleaser config for per-platform binaries published to GitHub Releases. Homebrew tap and Scoop bucket plumbing is wired but gated behind a repo variable for future activation.
+  - GitHub Actions workflows: `ci.yml` (vet + race tests on Linux / macOS / Windows) and `auto-release.yml` (auto-bump and publish on every push to `main`).
