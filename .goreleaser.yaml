@@ -82,7 +82,11 @@ scoops:
       name: scoop-bucket
 
 release:
-  draft: true
+  # Publish releases directly so 'go install ...@latest', the GitHub
+  # Releases UI, and the brew/scoop publishers all see them. Set
+  # draft: true if you ever want to gate releases behind a manual
+  # review.
+  draft: false
   prerelease: auto
   name_template: "pluckr {{.Version}}"
   header: |
