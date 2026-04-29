@@ -82,6 +82,7 @@ The kind is detected from the spec; pass --kind to override.`,
 	cmd.Flags().StringVar(&refresh, "refresh", "7d", "Refresh interval: 7d | 30d | manual | never. Background refresh kicks in when an MCP session starts.")
 	cmd.Flags().IntVar(&maxPages, "max", 0, "Maximum pages to pull (0 = source default).")
 	cmd.Flags().BoolVar(&pull, "pull", false, "Run a pull immediately after adding.")
+	cmd.Flags().BoolVar(&renderFlag, "render", false, "When --pull is set, escalate empty-content pages through a headless browser. Requires Chrome / Chromium installed on PATH.")
 	return cmd
 }
 
