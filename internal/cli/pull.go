@@ -8,9 +8,14 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/SarthakShrivastav-a/pluckr/internal/fetch"
 	"github.com/SarthakShrivastav-a/pluckr/internal/pipeline"
 	"github.com/SarthakShrivastav-a/pluckr/internal/registry"
 )
+
+// renderFlag is read by both 'pluckr pull' and 'pluckr add --pull' so a
+// single declaration here keeps the two paths consistent.
+var renderFlag bool
 
 func newPullCmd(g *Globals) *cobra.Command {
 	var all bool
@@ -28,6 +33,7 @@ func newPullCmd(g *Globals) *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&all, "all", false, "Pull every subscribed source.")
+	cmd.Flags().BoolVar(&renderFlag, "render", false, "Escalate empty-content pages through a headless browser. Requires Chrome / Chromium installed on PATH.")
 	return cmd
 }
 
@@ -69,11 +75,21 @@ func runPull(cmd *cobra.Command, g *Globals, names []string) error {
 		p := pipeline.New(cache, idx)
 		p.Lookup = os.Getenv
 
+		var headless *fetch.HeadlessFetcher
+		if renderFlag {
+			headless = fetch.NewHeadless()
+			p.Escalator = headless
+		}
+
 		fmt.Fprintf(cmd.OutOrStdout(), "pulling %s (%s)...\n", entry.Name, entry.Kind)
 		ctx, cancel := context.WithCancel(cmd.Context())
 		res, err := p.Run(ctx, entry)
 		cancel()
 		_ = idx.Close()
+
+		if headless != nil {
+			_ = headless.Close()
+		}
 
 		if err != nil {
 			return fmt.Errorf("pull %s: %w", entry.Name, err)

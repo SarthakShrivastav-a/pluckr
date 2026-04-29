@@ -31,11 +31,15 @@ import (
 // Pipeline wires the dependencies together. Construct one per cache
 // root and reuse across runs.
 type Pipeline struct {
-	Cache      *store.Cache
-	Retriever  retriever.Retriever
-	Renderer   render.Renderer
-	Chunker    chunk.Chunker
-	Fetcher    fetch.Fetcher
+	Cache     *store.Cache
+	Retriever retriever.Retriever
+	Renderer  render.Renderer
+	Chunker   chunk.Chunker
+	Fetcher   fetch.Fetcher
+	// Escalator is consulted only when the renderer reports
+	// ErrEmptyContent. Typically a *fetch.HeadlessFetcher; nil disables
+	// escalation and pages with empty bodies are counted as Skipped.
+	Escalator  fetch.Fetcher
 	Lookup     func(string) string
 	BufferSize int
 }
@@ -109,6 +113,11 @@ func (p *Pipeline) Run(ctx context.Context, entry registry.Entry) (Result, error
 		}
 
 		doc, err := p.Renderer.Render(page.Body, page.ContentType, page.URL)
+		if err != nil && errors.Is(err, render.ErrEmptyContent) && p.Escalator != nil {
+			if rendered, ok := p.escalate(ctx, page); ok {
+				doc, err = rendered, nil
+			}
+		}
 		if err != nil {
 			if errors.Is(err, render.ErrEmptyContent) {
 				res.Skipped++
@@ -168,6 +177,22 @@ func (p *Pipeline) Run(ctx context.Context, entry registry.Entry) (Result, error
 	res.EndedAt = time.Now().UTC()
 	res.Elapsed = res.EndedAt.Sub(startedAt)
 	return res, nil
+}
+
+// escalate retries an empty-content page through the headless escalator.
+// Returns the rendered Document and true on success; false if the
+// escalator is nil, the fetch errors, or the second render still
+// reports ErrEmptyContent.
+func (p *Pipeline) escalate(ctx context.Context, page types.Page) (types.Document, bool) {
+	resp, err := p.Escalator.Fetch(ctx, fetch.Request{URL: page.URL})
+	if err != nil || !resp.IsSuccess() {
+		return types.Document{}, false
+	}
+	doc, err := p.Renderer.Render(resp.Body, resp.ContentType, resp.URL)
+	if err != nil {
+		return types.Document{}, false
+	}
+	return doc, true
 }
 
 // NewSource constructs the concrete Source implementation for a
